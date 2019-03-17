@@ -2,10 +2,13 @@
 extern crate gfx;
 extern crate gfx_window_glutin;
 extern crate glutin;
+extern crate cgmath;
 
 use gfx::traits::FactoryExt;
 use gfx::format::{DepthStencil, Rgba8};
 use gfx::Device;
+use cgmath::Matrix2;
+use cgmath::Rad;
 
 gfx_defines!{
     vertex Vertex {
@@ -16,6 +19,7 @@ gfx_defines!{
     pipeline pipe {
         vbuf: gfx::VertexBuffer<Vertex> = (),
         out: gfx::RenderTarget<Rgba8> = "Target0",
+        transform: gfx::Global<[[f32; 2]; 2]> = "u_Transform",
     }
 }
 
@@ -47,10 +51,12 @@ fn main() {
     let pso = factory.create_pipeline_simple(&VERT_CODE, &FRAG_CODE, pipe::new())
         .unwrap();
     let (vertex_buffer, slice) = factory.create_vertex_buffer_with_slice(&TRIANGLE, ());
+    let mut time: f32 = 0.0;
 
     let mut data = pipe::Data {
         vbuf: vertex_buffer,
-        out: rtv
+        out: rtv,
+        transform: [[1.0, 0.0], [0.0, 1.0]],
     };
 
     let mut running = true;
@@ -69,11 +75,13 @@ fn main() {
                 _ => ()
             }
         });
+        data.transform = Matrix2::from_angle(Rad(time)).into();
         encoder.clear(&data.out, CLEAR_COLOR);
         encoder.draw(&slice, &pso, &data);
         encoder.flush(&mut device);
         window.swap_buffers().unwrap();
         device.cleanup();
         std::thread::sleep(std::time::Duration::from_millis(17));
+        time += 1.0 / 17.0;
     }
 }
